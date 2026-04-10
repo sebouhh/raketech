@@ -1,0 +1,8 @@
+{
+  "extends": "@raketech/config/tsconfig/nextjs",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src"]
+}
