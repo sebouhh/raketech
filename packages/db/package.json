@@ -20,8 +20,9 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "drizzle-orm": "^0.38.3",
-    "@neondatabase/serverless": "^0.10.4"
+    "@neondatabase/serverless": "^0.10.4",
+    "@opentelemetry/api": "1.9.1",
+    "drizzle-orm": "^0.38.3"
   },
   "devDependencies": {
     "@raketech/config": "workspace:*",
