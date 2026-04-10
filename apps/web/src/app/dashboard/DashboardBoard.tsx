@@ -51,7 +51,7 @@ export function DashboardBoard({
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
 
-  const { data: features = initialFeatures, refetch } = trpc.feature.list.useQuery(
+  const { data: features = initialFeatures, refetch } = trpc.feature.listForDashboard.useQuery(
     { workspaceId },
     { initialData: initialFeatures, refetchInterval: 30_000 },
   );

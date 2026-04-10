@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     redirect("/dashboard/settings");
   }
 
-  const features = await caller.feature.list({ workspaceId: workspace.id });
+  const features = await caller.feature.listForDashboard({ workspaceId: workspace.id });
 
   return (
     <DashboardBoard

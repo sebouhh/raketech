@@ -1,12 +1,44 @@
 import { changelogEntries, db, features, votes } from "@raketech/db";
 import { count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { redis } from "../redis.js";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc.js";
+
+export type ShipNotifyJob = { featureId: string; featureTitle: string; workspaceId: string };
 
 const featureStatusSchema = z.enum(["planned", "in_progress", "shipped"]);
 
 export const featureRouter = createTRPCRouter({
   list: publicProcedure
+    .input(z.object({ workspaceId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      return db
+        .select({
+          id: features.id,
+          workspaceId: features.workspaceId,
+          title: features.title,
+          description: features.description,
+          status: features.status,
+          createdAt: features.createdAt,
+          updatedAt: features.updatedAt,
+          voteCount: count(votes.id),
+        })
+        .from(features)
+        .leftJoin(votes, eq(votes.featureId, features.id))
+        .where(eq(features.workspaceId, input.workspaceId))
+        .groupBy(
+          features.id,
+          features.workspaceId,
+          features.title,
+          features.description,
+          features.status,
+          features.createdAt,
+          features.updatedAt,
+        )
+        .orderBy(desc(count(votes.id)));
+    }),
+
+  listForDashboard: protectedProcedure
     .input(z.object({ workspaceId: z.string().uuid() }))
     .query(async ({ input }) => {
       return db
@@ -73,10 +105,16 @@ export const featureRouter = createTRPCRouter({
         .returning();
 
       if (input.status === "shipped" && feature) {
-        // Create a changelog entry — email notifications handled separately (RAK-13)
         await db
           .insert(changelogEntries)
           .values({ featureId: feature.id, workspaceId: feature.workspaceId });
+
+        const job: ShipNotifyJob = {
+          featureId: feature.id,
+          featureTitle: feature.title,
+          workspaceId: feature.workspaceId,
+        };
+        await redis.lpush("queue:ship-notify", JSON.stringify(job));
       }
 
       return feature;
