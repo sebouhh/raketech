@@ -1,6 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | undefined;
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@raketech.app";
 
 export async function sendShipNotification({
@@ -13,7 +19,7 @@ export async function sendShipNotification({
   recipientEmail: string;
 }): Promise<void> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: recipientEmail,
       subject: `"${featureTitle}" just shipped!`,
@@ -40,7 +46,7 @@ export async function sendDailyDigest({
       )
       .join("");
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM,
       to: recipientEmail,
       subject: "Your daily roadmap vote digest",

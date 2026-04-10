@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createCallerFactory, createTRPCContext } from "@/server/trpc";
 import { appRouter } from "@/server/routers";
-import { RoadmapBoard } from "./RoadmapBoard";
+import { ChangelogFeed } from "./ChangelogFeed";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -9,7 +9,7 @@ interface Props {
   params: Promise<{ workspaceSlug: string }>;
 }
 
-export default async function WorkspaceRoadmapPage({ params }: Props) {
+export default async function ChangelogPage({ params }: Props) {
   const { workspaceSlug } = await params;
 
   const ctx = await createTRPCContext();
@@ -20,7 +20,16 @@ export default async function WorkspaceRoadmapPage({ params }: Props) {
     notFound();
   }
 
-  return <RoadmapBoard workspaceId={workspace.id} workspaceName={workspace.name} workspaceSlug={workspaceSlug} />;
+  const initialEntries = await caller.changelog.list({ workspaceId: workspace.id });
+
+  return (
+    <ChangelogFeed
+      workspaceId={workspace.id}
+      workspaceName={workspace.name}
+      workspaceSlug={workspaceSlug}
+      initialEntries={initialEntries}
+    />
+  );
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -33,7 +42,7 @@ export async function generateMetadata({ params }: Props) {
   if (!workspace) return {};
 
   return {
-    title: `${workspace.name} — Public Roadmap`,
-    description: `See what ${workspace.name} is building next and vote on features.`,
+    title: `${workspace.name} — Changelog`,
+    description: `See what ${workspace.name} has shipped recently.`,
   };
 }

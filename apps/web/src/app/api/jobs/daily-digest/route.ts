@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { db, features, users, votes, workspaces } from "@raketech/db";
 import { and, count, desc, eq, gte } from "drizzle-orm";
 import type { NextRequest } from "next/server";

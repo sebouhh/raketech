@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@raketech/ui";
 import { FeatureCard } from "@/components/FeatureCard";
 import { SubmitRequestModal } from "@/components/SubmitRequestModal";
@@ -15,9 +16,10 @@ const COLUMNS = [
 interface RoadmapBoardProps {
   workspaceId: string;
   workspaceName: string;
+  workspaceSlug: string;
 }
 
-export function RoadmapBoard({ workspaceId, workspaceName }: RoadmapBoardProps) {
+export function RoadmapBoard({ workspaceId, workspaceName, workspaceSlug }: RoadmapBoardProps) {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   const { data: features = [], refetch } = trpc.feature.list.useQuery(
@@ -59,6 +61,14 @@ export function RoadmapBoard({ workspaceId, workspaceName }: RoadmapBoardProps) 
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                     {items.length}
                   </span>
+                  {key === "shipped" && items.length > 0 && (
+                    <Link
+                      href={`/${workspaceSlug}/changelog`}
+                      className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      View changelog →
+                    </Link>
+                  )}
                 </div>
                 <div className="space-y-3">
                   {items.length === 0 ? (

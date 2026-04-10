@@ -17,6 +17,7 @@ export const changelogRouter = createTRPCRouter({
           featureDescription: features.description,
         })
         .from(changelogEntries)
+        .innerJoin(features, eq(changelogEntries.featureId, features.id))
         .where(eq(changelogEntries.workspaceId, input.workspaceId))
         .orderBy(desc(changelogEntries.createdAt));
     }),

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { db, features, votes, workspaces } from "@raketech/db";
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { NextRequest } from "next/server";
