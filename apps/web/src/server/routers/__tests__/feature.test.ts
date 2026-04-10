@@ -2,7 +2,7 @@
 import { TRPCError } from "@trpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockDb, chain } = vi.hoisted(() => {
+const { mockDb, chain, mockRedis } = vi.hoisted(() => {
   const chain = {
     from: vi.fn(),
     where: vi.fn(),
@@ -27,12 +27,17 @@ const { mockDb, chain } = vi.hoisted(() => {
     update: vi.fn().mockReturnValue(chain),
     delete: vi.fn().mockReturnValue(chain),
   };
-  return { mockDb, chain };
+
+  const mockRedis = { lpush: vi.fn(), rpop: vi.fn() };
+
+  return { mockDb, chain, mockRedis };
 });
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn().mockResolvedValue({ userId: null }),
 }));
+
+vi.mock("@/server/redis", () => ({ redis: mockRedis }));
 
 vi.mock("@raketech/db", () => ({
   db: mockDb,
@@ -82,6 +87,7 @@ beforeEach(() => {
   mockDb.insert.mockReturnValue(chain);
   mockDb.update.mockReturnValue(chain);
   mockDb.delete.mockReturnValue(chain);
+  mockRedis.lpush.mockResolvedValue(1);
 });
 
 describe("feature.list", () => {
@@ -146,6 +152,35 @@ describe("feature.updateStatus", () => {
       expect.objectContaining({ status: "shipped" }),
     );
     expect(result).toEqual(updated);
+  });
+
+  it("enqueues a ship-notify job in Redis when status becomes shipped", async () => {
+    const updated = { ...mockFeature, status: "shipped" as const };
+    chain.returning.mockResolvedValue([updated]);
+    const caller = createCaller({ userId: "user_abc", ip: "0.0.0.0" });
+
+    await caller.updateStatus({ id: FEATURE_ID, status: "shipped" });
+
+    expect(mockRedis.lpush).toHaveBeenCalledWith(
+      "queue:ship-notify",
+      expect.stringContaining(FEATURE_ID),
+    );
+    const queuePayload = JSON.parse(mockRedis.lpush.mock.calls[0][1]);
+    expect(queuePayload).toMatchObject({
+      featureId: FEATURE_ID,
+      featureTitle: mockFeature.title,
+      workspaceId: WORKSPACE_ID,
+    });
+  });
+
+  it("does not enqueue a Redis job for non-shipped statuses", async () => {
+    const updated = { ...mockFeature, status: "in_progress" as const };
+    chain.returning.mockResolvedValue([updated]);
+    const caller = createCaller({ userId: "user_abc", ip: "0.0.0.0" });
+
+    await caller.updateStatus({ id: FEATURE_ID, status: "in_progress" });
+
+    expect(mockRedis.lpush).not.toHaveBeenCalled();
   });
 
   it("throws UNAUTHORIZED when not logged in", async () => {
