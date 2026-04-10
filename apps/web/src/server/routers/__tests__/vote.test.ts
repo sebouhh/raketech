@@ -10,11 +10,15 @@ const { mockDb, chain, mockRedis } = vi.hoisted(() => {
     returning: vi.fn(),
     set: vi.fn(),
     orderBy: vi.fn(),
+    leftJoin: vi.fn(),
+    groupBy: vi.fn(),
   };
   chain.from.mockReturnValue(chain);
   chain.where.mockReturnValue(chain);
   chain.values.mockReturnValue(chain);
   chain.set.mockReturnValue(chain);
+  chain.leftJoin.mockReturnValue(chain);
+  chain.groupBy.mockReturnValue(chain);
 
   const mockDb = {
     select: vi.fn().mockReturnValue(chain),
@@ -41,7 +45,7 @@ vi.mock("@raketech/db", () => ({
   db: mockDb,
   workspaces: {},
   features: {},
-  votes: { featureId: "votes.featureId" },
+  votes: { featureId: "votes.featureId", id: "votes.id" },
   changelogEntries: {},
 }));
 
@@ -67,6 +71,8 @@ beforeEach(() => {
   chain.where.mockReturnValue(chain);
   chain.values.mockReturnValue(chain);
   chain.set.mockReturnValue(chain);
+  chain.leftJoin.mockReturnValue(chain);
+  chain.groupBy.mockReturnValue(chain);
   mockDb.select.mockReturnValue(chain);
   mockDb.insert.mockReturnValue(chain);
   mockDb.update.mockReturnValue(chain);
@@ -78,6 +84,7 @@ describe("vote.cast", () => {
     mockRedis.exists.mockResolvedValue(0);
     mockRedis.set.mockResolvedValue("OK");
     chain.returning.mockResolvedValue([mockVote]);
+    // IP comes from ctx (request headers), not from input
     const caller = createCaller({ userId: null, ip: TEST_IP });
 
     const result = await caller.cast({ featureId: FEATURE_ID });
@@ -125,7 +132,7 @@ describe("vote.cast", () => {
 describe("vote.count", () => {
   it("returns the vote count for a feature", async () => {
     chain.where.mockResolvedValue([{ count: 42 }]);
-    const caller = createCaller({ userId: null, ip: "127.0.0.1" });
+    const caller = createCaller({ userId: null, ip: "0.0.0.0" });
 
     const result = await caller.count({ featureId: FEATURE_ID });
 
@@ -134,7 +141,7 @@ describe("vote.count", () => {
 
   it("returns 0 when there are no votes", async () => {
     chain.where.mockResolvedValue([{ count: 0 }]);
-    const caller = createCaller({ userId: null, ip: "127.0.0.1" });
+    const caller = createCaller({ userId: null, ip: "0.0.0.0" });
 
     const result = await caller.count({ featureId: FEATURE_ID });
 

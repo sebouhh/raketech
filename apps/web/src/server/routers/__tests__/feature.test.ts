@@ -57,6 +57,7 @@ const createCaller = createCallerFactory(featureRouter);
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
 const FEATURE_ID = "00000000-0000-0000-0000-000000000002";
+const CTX = { userId: null, ip: "0.0.0.0" } as const;
 
 const mockFeature = {
   id: FEATURE_ID,
@@ -67,10 +68,7 @@ const mockFeature = {
   internalNotes: null,
   createdAt: new Date("2026-01-01"),
   updatedAt: new Date("2026-01-01"),
-  voteCount: 0,
 };
-
-const ctx = { userId: null as string | null, ip: "127.0.0.1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -87,19 +85,20 @@ beforeEach(() => {
 });
 
 describe("feature.list", () => {
-  it("lists features for a workspace", async () => {
-    chain.orderBy.mockResolvedValue([mockFeature]);
-    const caller = createCaller(ctx);
+  it("lists features for a workspace with vote counts", async () => {
+    const featureWithCount = { ...mockFeature, voteCount: 5 };
+    chain.orderBy.mockResolvedValue([featureWithCount]);
+    const caller = createCaller(CTX);
 
     const result = await caller.list({ workspaceId: WORKSPACE_ID });
 
     expect(mockDb.select).toHaveBeenCalled();
-    expect(result).toEqual([mockFeature]);
+    expect(result).toEqual([featureWithCount]);
   });
 
   it("returns empty array when no features exist", async () => {
     chain.orderBy.mockResolvedValue([]);
-    const caller = createCaller(ctx);
+    const caller = createCaller(CTX);
 
     const result = await caller.list({ workspaceId: WORKSPACE_ID });
 
@@ -110,7 +109,7 @@ describe("feature.list", () => {
 describe("feature.create", () => {
   it("creates a feature with planned status by default", async () => {
     chain.returning.mockResolvedValue([mockFeature]);
-    const caller = createCaller({ userId: "user_abc", ip: "127.0.0.1" });
+    const caller = createCaller({ userId: "user_abc", ip: "0.0.0.0" });
 
     const result = await caller.create({
       workspaceId: WORKSPACE_ID,
@@ -126,7 +125,7 @@ describe("feature.create", () => {
   });
 
   it("throws UNAUTHORIZED when not logged in", async () => {
-    const caller = createCaller(ctx);
+    const caller = createCaller(CTX);
 
     await expect(
       caller.create({ workspaceId: WORKSPACE_ID, title: "Dark mode" }),
@@ -138,7 +137,7 @@ describe("feature.updateStatus", () => {
   it("updates a feature status", async () => {
     const updated = { ...mockFeature, status: "shipped" as const };
     chain.returning.mockResolvedValue([updated]);
-    const caller = createCaller({ userId: "user_abc", ip: "127.0.0.1" });
+    const caller = createCaller({ userId: "user_abc", ip: "0.0.0.0" });
 
     const result = await caller.updateStatus({ id: FEATURE_ID, status: "shipped" });
 
@@ -150,7 +149,7 @@ describe("feature.updateStatus", () => {
   });
 
   it("throws UNAUTHORIZED when not logged in", async () => {
-    const caller = createCaller(ctx);
+    const caller = createCaller(CTX);
 
     await expect(
       caller.updateStatus({ id: FEATURE_ID, status: "shipped" }),
@@ -161,7 +160,7 @@ describe("feature.updateStatus", () => {
 describe("feature.delete", () => {
   it("deletes a feature", async () => {
     chain.where.mockResolvedValue(undefined);
-    const caller = createCaller({ userId: "user_abc", ip: "127.0.0.1" });
+    const caller = createCaller({ userId: "user_abc", ip: "0.0.0.0" });
 
     const result = await caller.delete({ id: FEATURE_ID });
 
@@ -170,7 +169,7 @@ describe("feature.delete", () => {
   });
 
   it("throws UNAUTHORIZED when not logged in", async () => {
-    const caller = createCaller(ctx);
+    const caller = createCaller(CTX);
 
     await expect(caller.delete({ id: FEATURE_ID })).rejects.toThrow(TRPCError);
   });
