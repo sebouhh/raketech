@@ -1,4 +1,4 @@
-import { db, features, votes } from "@raketech/db";
+import { changelogEntries, db, features, votes } from "@raketech/db";
 import { count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc.js";
@@ -16,6 +16,7 @@ export const featureRouter = createTRPCRouter({
           title: features.title,
           description: features.description,
           status: features.status,
+          internalNotes: features.internalNotes,
           createdAt: features.createdAt,
           updatedAt: features.updatedAt,
           voteCount: count(votes.id),
@@ -29,6 +30,7 @@ export const featureRouter = createTRPCRouter({
           features.title,
           features.description,
           features.status,
+          features.internalNotes,
           features.createdAt,
           features.updatedAt,
         )
@@ -67,6 +69,30 @@ export const featureRouter = createTRPCRouter({
       const [feature] = await db
         .update(features)
         .set({ status: input.status, updatedAt: new Date() })
+        .where(eq(features.id, input.id))
+        .returning();
+
+      if (input.status === "shipped" && feature) {
+        // Create a changelog entry — email notifications handled separately (RAK-13)
+        await db
+          .insert(changelogEntries)
+          .values({ featureId: feature.id, workspaceId: feature.workspaceId });
+      }
+
+      return feature;
+    }),
+
+  updateNotes: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        internalNotes: z.string().max(5000),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const [feature] = await db
+        .update(features)
+        .set({ internalNotes: input.internalNotes, updatedAt: new Date() })
         .where(eq(features.id, input.id))
         .returning();
       return feature;
