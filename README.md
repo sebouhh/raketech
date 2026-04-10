@@ -18,7 +18,7 @@ See [ADR-001](/RAK/issues/RAK-2#document-plan) for the full architecture decisio
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url> raketech
+git clone https://github.com/sebouhh/raketech.git raketech
 cd raketech
 
 # 2. First-time setup (installs deps + creates .env.local)
