@@ -1,7 +1,6 @@
 import { db, votes } from "@raketech/db";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { z } from "zod";
-import { redis } from "../redis.js";
 import { createTRPCRouter, publicProcedure } from "../trpc.js";
 
 export const voteRouter = createTRPCRouter({
@@ -13,10 +12,14 @@ export const voteRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const dedupKey = `vote:${input.featureId}:${ctx.ip}`;
-      const alreadyVoted = await redis.exists(dedupKey);
+      // Dedup via DB: one vote per IP per feature
+      const existing = await db
+        .select({ id: votes.id })
+        .from(votes)
+        .where(and(eq(votes.featureId, input.featureId), eq(votes.ip, ctx.ip)))
+        .limit(1);
 
-      if (alreadyVoted) {
+      if (existing.length > 0) {
         return { success: false, alreadyVoted: true };
       }
 
@@ -24,9 +27,6 @@ export const voteRouter = createTRPCRouter({
         .insert(votes)
         .values({ featureId: input.featureId, ip: ctx.ip, email: input.email })
         .returning();
-
-      // 1-year TTL for dedup key
-      await redis.set(dedupKey, "1", { ex: 60 * 60 * 24 * 365 });
 
       return { success: true, alreadyVoted: false, vote };
     }),

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import { signOut } from "next-auth/react";
 import { Button } from "@raketech/ui";
 import { trpc } from "@/trpc/client";
 
@@ -115,7 +115,13 @@ export function DashboardBoard({
                 Settings
               </Button>
             </Link>
-            <UserButton />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            >
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>

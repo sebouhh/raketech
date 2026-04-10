@@ -1,10 +1,7 @@
 import { changelogEntries, db, features, votes } from "@raketech/db";
 import { count, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { redis } from "../redis.js";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc.js";
-
-export type ShipNotifyJob = { featureId: string; featureTitle: string; workspaceId: string };
 
 const featureStatusSchema = z.enum(["planned", "in_progress", "shipped"]);
 
@@ -69,7 +66,7 @@ export const featureRouter = createTRPCRouter({
         .orderBy(desc(count(votes.id)));
     }),
 
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         workspaceId: z.string().uuid(),
@@ -108,13 +105,6 @@ export const featureRouter = createTRPCRouter({
         await db
           .insert(changelogEntries)
           .values({ featureId: feature.id, workspaceId: feature.workspaceId });
-
-        const job: ShipNotifyJob = {
-          featureId: feature.id,
-          featureTitle: feature.title,
-          workspaceId: feature.workspaceId,
-        };
-        await redis.lpush("queue:ship-notify", JSON.stringify(job));
       }
 
       return feature;

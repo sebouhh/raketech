@@ -1,11 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/auth";
 import { TRPCError, initTRPC } from "@trpc/server";
 import { headers } from "next/headers";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 export const createTRPCContext = async () => {
-  const { userId } = await auth();
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
   const headersList = await headers();
   const ip =
     headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
