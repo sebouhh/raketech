@@ -1,11 +1,17 @@
 import { auth } from "@clerk/nextjs/server";
 import { TRPCError, initTRPC } from "@trpc/server";
+import { headers } from "next/headers";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 export const createTRPCContext = async () => {
   const { userId } = await auth();
-  return { userId };
+  const headersList = await headers();
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "unknown";
+  return { userId, ip };
 };
 
 type Context = Awaited<ReturnType<typeof createTRPCContext>>;
